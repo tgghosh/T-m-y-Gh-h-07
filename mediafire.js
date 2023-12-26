@@ -1,19 +1,26 @@
-const axios = require('axios')
-const cheerio = require('cheerio')
-
-const mediafiredownload = async (url) => {
-const res = await axios.get(url) 
-const $ = cheerio.load(res.data)
-const response = []
-const link = $('a#downloadButton').attr('href')
-const size = $('a#downloadButton').text().replace('Download', '').replace('(', '').replace(')', '').replace('\n', '').replace('\n', '').replace('                         ', '')
-const seplit = link.split('/')
-const name = seplit[5]
-mime = name.split('.')
-mime = mime[1]
-response.push({ name, mime, size, link })
-return response
-}
-
-
-module.exports = { mediafiredownload }
+const {
+	Function,
+	mediafiredownload,
+	getUrl,
+	isPublic
+} = require('../lib/');
+Function({
+	pattern: 'mediafire ?(.*)',
+	fromMe: isPublic,
+	desc: 'Download mediafire file',
+	type: 'download'
+}, async (message, match) => {
+	match = getUrl(match || message.reply_message.text)
+	const response = await mediafiredownload(match)
+	await message.reply('```Name : ' + response[0].nama + '\nSize : ' + response[0].size + '\nLink : ' + response[0].link + '```\n\n_Downloading.._')
+	await message.client.sendMessage(message.chat, {
+			document: {
+				url: response[0].link
+			},
+			mimetype: response[0].mime,
+			fileName: response[0].name
+		}, {
+			quoted: message.data
+		})
+		.catch((e) => message.reply('_fileLength is too high_'))
+})
